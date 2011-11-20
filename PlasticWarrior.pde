@@ -1,3 +1,10 @@
+/*
+
+Author: Jonathan Castro
+Project Name: PlasticWarrior
+Description:  A Robotic arm developed in Arduino 
+
+*/
 #include <Servo.h>
 
 Servo MotorWarrior[7];
