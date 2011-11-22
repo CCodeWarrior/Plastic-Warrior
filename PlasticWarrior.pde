@@ -27,11 +27,17 @@ Servo MotorWarrior[7];
 int valx = 0;
 int valy = 0;
 int Motor[7] = {7, 8, 9, 10, 11, 12, 13};
-int Acumulador[7]={512, 512, 512, 512, 512, 512, 512};
-char posAngular[7] = {};
+int Acumulador[7]={426, 472, 472,341, 795, 425, 570};
+int posAngular[7] = {};
+
 
 enum Estados {base,  muneca,  codo, secuencia};
 enum Estados estado_actual = base;
+
+//definicion de estados para secuencia1
+
+enum estados_secuencia {subirIzquierda, desplazarDerecha, bajarDerecha, subirDerecha, desplazarIzquierda, bajarIzquierda, paro};
+enum estados_secuencia estado_secuencia1 = paro;
 
 boolean botones[5]={HIGH, HIGH, HIGH, HIGH, HIGH};
 boolean botonAnterior[5]={HIGH, HIGH, HIGH, HIGH, HIGH};
@@ -65,8 +71,8 @@ void loop(){
 }
 
 void inData(){
-    valx = (map(analogRead(A0),0,1023,-512,511) + 10)/16;
-    valy = (map(analogRead(A1),0,1023,-512,511) + 5)/16;
+    valx = (map(analogRead(A0),0,1023,-512,511) + 10)/32;
+    valy = (map(analogRead(A1),0,1023,-512,511) + 5)/32;
     for(int i = 0; i<5; i++){
       botonAnterior[i]=botones[i];
       botones[i]=digitalRead(i+2);
@@ -109,6 +115,8 @@ void MEF1(){
     
     case secuencia:
     
+    
+    
       if(botonPresionado[1]) estado_actual=codo;
       if(botonPresionado[2]) estado_actual=muneca;
       if(botonPresionado[3]) estado_actual=base;
@@ -119,24 +127,18 @@ void MEF1(){
 }
 
 void outData(){
+    int desfase = -17;
+    
+    Acumulador[2]= Acumulador[1] + desfase;
     for(int i=0; i<7; i++){
       if(Acumulador[i]>1023) Acumulador[i]=1023;
       else if(Acumulador[i]<0) Acumulador[i]=0;
   
-      posAngular[i]=map(Acumulador[i],0,1023,0,90);
+      posAngular[i]=map(Acumulador[i],0,1023,0,180);
       MotorWarrior[i].write(posAngular[i]);
-      //visualizacion de variables
-      Serial.print(posAngular[i],DEC); 
-      Serial.print(" ");
+//      Serial.println(posAngular[4],DEC);
     }
-    Serial.print(valx, DEC);
-    Serial.print(" ");
-    Serial.print(valy, DEC);
-    Serial.print(" ");
-    Serial.print(estado_actual, DEC);
-    Serial.println(" ");    
-
-    delay(100);
+    delay(50);
 }
 
 
