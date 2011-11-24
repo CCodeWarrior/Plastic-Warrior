@@ -27,17 +27,18 @@ Servo MotorWarrior[7];
 int valx = 0;
 int valy = 0;
 int Motor[7] = {7, 8, 9, 10, 11, 12, 13};
-int Acumulador[7]={426, 472, 472,341, 795, 425, 570};
-int posAngular[7] = {};
+//int posAngular[7]={426, 472, 472,341, 568, 425, 570};
+int posAngular[7] = {75, 75, 72, 64, 121, 75, 0 }; //posicion Inici
 
+int velDiv=0;
 
-enum Estados {base,  muneca,  codo, secuencia};
+enum Estados {base,  muneca,  codo, secuencia, descansando};
 enum Estados estado_actual = base;
 
 //definicion de estados para secuencia1
 
-enum estados_secuencia {subirIzquierda, desplazarDerecha, bajarDerecha, subirDerecha, desplazarIzquierda, bajarIzquierda, paro};
-enum estados_secuencia estado_secuencia1 = paro;
+enum estados_secuencia {subirIzquierda, desplazarDerecha, bajarDerecha, subirDerecha, desplazarIzquierda, bajarIzquierda, paro, inicial};
+enum estados_secuencia estado_secuencia1 = inicial;
 
 boolean botones[5]={HIGH, HIGH, HIGH, HIGH, HIGH};
 boolean botonAnterior[5]={HIGH, HIGH, HIGH, HIGH, HIGH};
@@ -57,7 +58,6 @@ void setup(){
 //valores iniciales
   
   for(int i = 0; i<7; i++){
-    posAngular[i]=45;
     MotorWarrior[i].attach(Motor[i]);
     MotorWarrior[i].write(posAngular[i]);
   }
@@ -71,8 +71,12 @@ void loop(){
 }
 
 void inData(){
-    valx = (map(analogRead(A0),0,1023,-512,511) + 10)/32;
-    valy = (map(analogRead(A1),0,1023,-512,511) + 5)/32;
+//    valx = (map(analogRead(A0),0,1023,-512,511) + 10)/32;
+//    valy = (map(analogRead(A1),0,1023,-512,511) + 5)/32;
+   
+   valx = map(analogRead(A0),0,1023,-45,45)/8;
+   valy = map(analogRead(A1),0,1023,-45,45)/8;
+   
     for(int i = 0; i<5; i++){
       botonAnterior[i]=botones[i];
       botones[i]=digitalRead(i+2);
@@ -85,41 +89,134 @@ void MEF1(){
   switch(estado_actual){
     
     case base:
-      Acumulador[0] = Acumulador[0] + valx;   //integrador para Motor0
-      Acumulador[1] = Acumulador[1] + valy;   //integrador para Motor1
-      
+      posAngular[0] = posAngular[0] - valx;   //integrador para Motor0
+      posAngular[1] = posAngular[1] + valy;   //integrador para Motor1
+
+      if(botonPresionado[0]) estado_actual=descansando;      
       if(botonPresionado[1]) estado_actual=codo;
       if(botonPresionado[2]) estado_actual=muneca;
-      if(botonPresionado[4]) estado_actual=secuencia;      
+      if(botonPresionado[4]){ estado_actual=secuencia;
+                              estado_secuencia1=inicial;}
+      
     break;
     
     case codo:
-      Acumulador[3]=Acumulador[3] + valy;
-      Acumulador[6]=Acumulador[6] + valx;
-      
+      posAngular[3]=posAngular[3] - valy;
+      posAngular[6]=posAngular[6] + valx;
+
+      if(botonPresionado[0]) estado_actual=descansando;
       if(botonPresionado[2]) estado_actual=muneca;
       if(botonPresionado[3]) estado_actual=base;
-      if(botonPresionado[4]) estado_actual=secuencia;            
+      if(botonPresionado[4]){ estado_actual=secuencia;
+                              estado_secuencia1=inicial;}          
     break;
     
     case muneca:
-      Acumulador[5]=Acumulador[5] + valx;
-      Acumulador[4]=Acumulador[4] + valy;
+      posAngular[5]=posAngular[5] + valx;
+      posAngular[4]=posAngular[4] + valy;
       
+      if(botonPresionado[0]) estado_actual=descansando;      
       if(botonPresionado[1]) estado_actual=codo;
       if(botonPresionado[3]) estado_actual=base;
-      if(botonPresionado[4]) estado_actual=secuencia;    
+      if(botonPresionado[4]){ estado_actual=secuencia;
+                              estado_secuencia1=inicial;}
     
     break;
    
+    case descansando:
+         posInicial();
+  
+         if(botonPresionado[1]) estado_actual=codo;
+         if(botonPresionado[2]) estado_actual=muneca;
+         if(botonPresionado[3]) estado_actual=base;
+         if(botonPresionado[4]){ estado_actual=secuencia;
+                              estado_secuencia1=inicial;}
+    break;
     
     case secuencia:
+      switch(estado_secuencia1){
+        case inicial:
+          posInicial();
+         
+         if((posAngular[0]==75) && (posAngular[1]==75) && (posAngular[2]==72) && (posAngular[3]==64) && (posAngular[4]==121) && (posAngular[5]==75) && (posAngular[6]==12))
+           estado_secuencia1 = desplazarIzquierda;
+        break;
+        
+        case desplazarIzquierda:
+           if(posAngular[0]>170) posAngular[0]--;
+           else if(posAngular[0]<170) posAngular[0]++;
+           else if(posAngular[0] == 170) estado_secuencia1 = subirIzquierda;
+          
+        break;
+
+        
+        case subirIzquierda:
+          if(posAngular[4]>20) posAngular[4]--;
+          else if(posAngular[4]<20) posAngular[4]++;
+          if(posAngular[4]==20){
+            if(posAngular[6]>50) posAngular[6]--;
+            else if(posAngular[6]<50) posAngular[6]++;
+            else estado_secuencia1=bajarIzquierda;
+          }
+        
+        break;
+
+        case subirDerecha:
+          if(posAngular[4]>20) posAngular[4]--;
+          else if(posAngular[4]<20) posAngular[4]++;
+          if(posAngular[4]==20){
+            if(posAngular[6]>50) posAngular[6]--;
+            else if(posAngular[6]<50) posAngular[6]++;
+            else estado_secuencia1=bajarDerecha;
+          }          
+        
+        break;
+        
+        case bajarIzquierda:
+          if(posAngular[6]>12) posAngular[6]--;
+          else if(posAngular[6]<12) posAngular[6]++;
+          if(posAngular[6]==12){
+            if(posAngular[4]>121) posAngular[4]--;
+            else if(posAngular[4]<121) posAngular[4]++;
+            else estado_secuencia1=desplazarDerecha;
+          }
+        
+        break;
+
+        case bajarDerecha:
+          if(posAngular[6]>12) posAngular[6]--;
+          else if(posAngular[6]<12) posAngular[6]++;
+          if(posAngular[6]==12){
+            if(posAngular[4]>121) posAngular[4]--;
+            else if(posAngular[4]<121) posAngular[4]++;
+            else estado_secuencia1=desplazarIzquierda;
+          }
+        
+        break;
+
+        case desplazarDerecha:
+          if(posAngular[0]>75) posAngular[0]--;
+           else if(posAngular[0]<75) posAngular[0]++;
+           else if(posAngular[0] == 75) estado_secuencia1 = subirDerecha;
+        
+        break;
+        
+
+
+
+        case paro:
+          
+        
+        break;
+        
+      }
+      
     
-    
-    
+      if(botonPresionado[0]) estado_actual=descansando;
       if(botonPresionado[1]) estado_actual=codo;
       if(botonPresionado[2]) estado_actual=muneca;
       if(botonPresionado[3]) estado_actual=base;
+      
     break;
 
   }
@@ -127,18 +224,57 @@ void MEF1(){
 }
 
 void outData(){
-    int desfase = -17;
+    int desfase = -3;
     
-    Acumulador[2]= Acumulador[1] + desfase;
+
     for(int i=0; i<7; i++){
-      if(Acumulador[i]>1023) Acumulador[i]=1023;
-      else if(Acumulador[i]<0) Acumulador[i]=0;
-  
-      posAngular[i]=map(Acumulador[i],0,1023,0,180);
+      
+      if(posAngular[i]>180) posAngular[i]=180;
+      else if(posAngular[i]<=3) posAngular[i]=3;
+      
+      posAngular[2]= posAngular[1] + desfase;
+      
+      if(posAngular[6]>90) posAngular[6]=90;
+      else  if(posAngular[6] < 12) posAngular[6]=12;
+      
       MotorWarrior[i].write(posAngular[i]);
-//      Serial.println(posAngular[4],DEC);
+   // Serial.print(posAngular[i],DEC);
+   // Serial.print(" ");
     }
+   // Serial.print(valx,DEC);
+   // Serial.print(" ");
+   
+   Serial.print(posAngular[4],DEC);
+   Serial.print("\n");
     delay(50);
 }
+
+void posInicial(){
+
+
+         
+         if(posAngular[3] > 64) posAngular[3]--;
+         else if(posAngular[3] < 64) posAngular[3]++;
+         
+         if(posAngular[6] > 12) posAngular[6]--;
+
+     
+     if(posAngular[0] > 75) posAngular[0]=posAngular[0]-1;
+     else if(posAngular[0] < 75) posAngular[0]=posAngular[0]+1;
+          
+     if(posAngular[1] > 75) posAngular[1]=posAngular[1]-1;
+     else if(posAngular[1] < 75) posAngular[1]=posAngular[1]+1;
+               
+     if(posAngular[2] > 72) posAngular[2]=posAngular[2]-1;
+     else if(posAngular[2] < 72) posAngular[2]=posAngular[2]+1;
+               
+               
+     if(posAngular[4] > 121) posAngular[4]=posAngular[4]-1;
+     else if(posAngular[4] < 121) posAngular[4]=posAngular[4]+1;
+               
+     if(posAngular[5] > 75) posAngular[5]=posAngular[5]-1;
+     else if(posAngular[5] < 75) posAngular[5]=posAngular[5]+1;
+           
+  }
 
 
